@@ -7,6 +7,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/lucsky/cuid"
+	"github.com/mtbuzato/go-challenge/internal/model"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,7 +31,7 @@ func beforeAll(t *testing.T) (*assert.Assertions, *sql.DB, sqlmock.Sqlmock) {
 
 func TestListAll(t *testing.T) {
 	tests := map[string]struct {
-		expected []Task
+		expected []model.Task
 		query    func(mock sqlmock.Sqlmock) *sqlmock.ExpectedQuery
 	}{
 		"empty": {
@@ -41,7 +42,7 @@ func TestListAll(t *testing.T) {
 			},
 		},
 		"one": {
-			expected: []Task{
+			expected: []model.Task{
 				{ID: "1", Name: "Task 1", Completed: false},
 			},
 			query: func(mock sqlmock.Sqlmock) *sqlmock.ExpectedQuery {
@@ -53,7 +54,7 @@ func TestListAll(t *testing.T) {
 			},
 		},
 		"many": {
-			expected: []Task{
+			expected: []model.Task{
 				{ID: "1", Name: "Task 1", Completed: false},
 				{ID: "2", Name: "Task 2", Completed: false},
 				{ID: "3", Name: "Task 3", Completed: false},
@@ -90,7 +91,7 @@ func TestListAll(t *testing.T) {
 
 func TestListByCompletion(t *testing.T) {
 	tests := map[string]struct {
-		expected  []Task
+		expected  []model.Task
 		query     func(mock sqlmock.Sqlmock) *sqlmock.ExpectedQuery
 		completed bool
 	}{
@@ -104,7 +105,7 @@ func TestListByCompletion(t *testing.T) {
 			completed: false,
 		},
 		"one": {
-			expected: []Task{
+			expected: []model.Task{
 				{ID: "1", Name: "Task 1", Completed: false},
 			},
 			query: func(mock sqlmock.Sqlmock) *sqlmock.ExpectedQuery {
@@ -118,7 +119,7 @@ func TestListByCompletion(t *testing.T) {
 			completed: false,
 		},
 		"many": {
-			expected: []Task{
+			expected: []model.Task{
 				{ID: "1", Name: "Task 1", Completed: true},
 				{ID: "2", Name: "Task 2", Completed: true},
 				{ID: "3", Name: "Task 3", Completed: true},
@@ -158,19 +159,19 @@ func TestListByCompletion(t *testing.T) {
 func TestGetByID(t *testing.T) {
 	tests := map[string]struct {
 		id       string
-		expected Task
+		expected model.Task
 		query    func(mock sqlmock.Sqlmock) *sqlmock.ExpectedQuery
 	}{
 		"invalid_id": {
 			id:       "",
-			expected: Task{},
+			expected: model.Task{},
 			query: func(mock sqlmock.Sqlmock) *sqlmock.ExpectedQuery {
 				return nil
 			},
 		},
 		"existing": {
 			id: "cl09rb83d000009l13y5n5ur8",
-			expected: Task{
+			expected: model.Task{
 				ID: "cl09rb83d000009l13y5n5ur8", Name: "Task 1", Completed: false,
 			},
 			query: func(mock sqlmock.Sqlmock) *sqlmock.ExpectedQuery {
@@ -184,7 +185,7 @@ func TestGetByID(t *testing.T) {
 		},
 		"non_existing": {
 			id:       "cl09rb83d000009l13y5n5ur8",
-			expected: Task{},
+			expected: model.Task{},
 			query: func(mock sqlmock.Sqlmock) *sqlmock.ExpectedQuery {
 				return mock.ExpectQuery("SELECT (.+) FROM tasks WHERE id").
 					WithArgs("cl09rb83d000009l13y5n5ur8").
@@ -268,12 +269,12 @@ func TestCreate(t *testing.T) {
 }
 func TestUpdate(t *testing.T) {
 	tests := map[string]struct {
-		task        Task
+		task        model.Task
 		shouldError bool
 		query       func(mock sqlmock.Sqlmock) *sqlmock.ExpectedExec
 	}{
 		"invalid_id": {
-			task: Task{
+			task: model.Task{
 				ID: "",
 			},
 			shouldError: true,
@@ -282,7 +283,7 @@ func TestUpdate(t *testing.T) {
 			},
 		},
 		"invalid_name": {
-			task: Task{
+			task: model.Task{
 				ID:   "cl09rb83d000009l13y5n5ur8",
 				Name: "",
 			},
@@ -292,7 +293,7 @@ func TestUpdate(t *testing.T) {
 			},
 		},
 		"valid": {
-			task: Task{
+			task: model.Task{
 				ID:        "cl09rb83d000009l13y5n5ur8",
 				Name:      "Task 1",
 				Completed: true,
