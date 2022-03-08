@@ -14,6 +14,8 @@ type TaskRepository interface {
 	ListAll() ([]model.Task, error)
 	ListByCompletion(completed bool) ([]model.Task, error)
 	Create(name string) (model.Task, error)
+	GetByID(id string) (model.Task, error)
+	Update(task model.Task) error
 }
 
 type APIServer struct {
@@ -33,9 +35,9 @@ func NewAPIServer(repo TaskRepository) *APIServer {
 
 	tasksRouter.HandleFunc("", server.getTasks).Methods("GET").Queries("{completed:(true)|(false)}")
 	tasksRouter.HandleFunc("", server.getTasks).Methods("GET")
+	tasksRouter.HandleFunc("/{id}", server.getTask).Methods("GET")
 	tasksRouter.HandleFunc("", server.postTask).Methods("POST")
-	// tasksRouter.HandleFunc("/{id}", server.getTask).Methods("GET")
-	// tasksRouter.HandleFunc("/{id}", server.updateTask).Methods("PUT")
+	tasksRouter.HandleFunc("/{id}", server.putTask).Methods("PUT")
 
 	server.Handler = router
 
@@ -44,7 +46,12 @@ func NewAPIServer(repo TaskRepository) *APIServer {
 
 func (s *APIServer) handleError(w http.ResponseWriter, err error) {
 	if errors.IsExternal(err) {
-		w.WriteHeader(http.StatusBadRequest)
+		if errors.IsNotFound(err) {
+			w.WriteHeader(http.StatusNotFound)
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+
 		fmt.Fprint(w, "{\"error\": \"", err.Error(), "\"}")
 	} else {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -82,6 +89,27 @@ func (s *APIServer) getTasks(w http.ResponseWriter, r *http.Request) {
 	w.Write(str)
 }
 
+func (s *APIServer) getTask(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	id := vars["id"]
+
+	task, err := s.repo.GetByID(id)
+	if err != nil {
+		s.handleError(w, err)
+		return
+	}
+
+	str, err := json.Marshal(task)
+	if err != nil {
+		s.handleError(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(str)
+}
+
 type PostTaskBody struct {
 	Name string `json:"name"`
 }
@@ -108,5 +136,45 @@ func (s *APIServer) postTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
+	w.Write(str)
+}
+
+type PutTaskBody struct {
+	Name      string `json:"name"`
+	Completed bool   `json:"completed"`
+}
+
+func (s *APIServer) putTask(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	id := vars["id"]
+
+	var taskBody PutTaskBody
+
+	err := json.NewDecoder(r.Body).Decode(&taskBody)
+	if err != nil {
+		s.handleError(w, errors.NewExternalError("Invalid body."))
+		return
+	}
+
+	task := model.Task{
+		ID:        id,
+		Name:      taskBody.Name,
+		Completed: taskBody.Completed,
+	}
+
+	err = s.repo.Update(task)
+	if err != nil {
+		s.handleError(w, err)
+		return
+	}
+
+	str, err := json.Marshal(task)
+	if err != nil {
+		s.handleError(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 	w.Write(str)
 }

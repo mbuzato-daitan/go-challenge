@@ -1,15 +1,20 @@
 package errors
 
 type ExternalError struct {
-	Message string
+	msg      string
+	notFound bool
 }
 
 func (e *ExternalError) Error() string {
-	return e.Message
+	return e.msg
 }
 
 func (e *ExternalError) External() bool {
 	return true
+}
+
+func (e *ExternalError) NotFound() bool {
+	return e.notFound
 }
 
 func IsExternal(err error) bool {
@@ -17,8 +22,20 @@ func IsExternal(err error) bool {
 	return ok && external.External()
 }
 
+func IsNotFound(err error) bool {
+	external, ok := err.(*ExternalError)
+	return ok && external.External() && external.NotFound()
+}
+
 func NewExternalError(message string) error {
 	return &ExternalError{
-		Message: message,
+		msg: message,
+	}
+}
+
+func NewNotFoundError(message string) error {
+	return &ExternalError{
+		msg:      message,
+		notFound: true,
 	}
 }

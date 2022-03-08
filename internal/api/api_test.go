@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mtbuzato/go-challenge/internal/errors"
 	"github.com/mtbuzato/go-challenge/internal/model"
 	"github.com/stretchr/testify/assert"
 )
@@ -25,10 +26,44 @@ func (r *StubTaskRepository) ListByCompletion(completed bool) ([]model.Task, err
 	return r.tasks, nil
 }
 
+func (r *StubTaskRepository) GetByID(id string) (model.Task, error) {
+	var task model.Task
+	for _, t := range r.tasks {
+		if t.ID == id {
+			task = t
+			break
+		}
+	}
+
+	if task.Name == "" {
+		return task, errors.NewNotFoundError("Task not found.")
+	}
+
+	return task, nil
+}
+
 func (r *StubTaskRepository) Create(name string) (model.Task, error) {
 	task := model.Task{ID: "4", Name: name, Completed: false}
 	r.createdTasks = append(r.createdTasks, task)
 	return task, nil
+}
+
+func (r *StubTaskRepository) Update(task model.Task) error {
+	found := false
+
+	for i, t := range r.tasks {
+		if t.ID == task.ID {
+			r.tasks[i] = task
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return errors.NewNotFoundError("Task not found.")
+	}
+
+	return nil
 }
 
 func TestGETTasks(t *testing.T) {
@@ -81,6 +116,52 @@ func TestGETTasks(t *testing.T) {
 	}
 }
 
+func TestGETTask(t *testing.T) {
+	tasks := []model.Task{
+		{ID: "1", Name: "Task 1", Completed: false},
+		{ID: "2", Name: "Task 2", Completed: true},
+		{ID: "3", Name: "Task 3", Completed: false},
+	}
+
+	server := NewAPIServer(&StubTaskRepository{tasks: tasks})
+
+	tests := map[string]struct {
+		id             string
+		expectedStatus int
+		expectedTask   model.Task
+	}{
+		"Get a task": {
+			id:             "1",
+			expectedStatus: http.StatusOK,
+			expectedTask:   tasks[0],
+		},
+		"Get a task that does not exist": {
+			id:             "4",
+			expectedStatus: http.StatusNotFound,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert := assert.New(t)
+			req, err := http.NewRequest("GET", "/tasks/"+test.id, nil)
+			assert.NoError(err)
+
+			w := httptest.NewRecorder()
+			server.ServeHTTP(w, req)
+
+			assert.Equal(test.expectedStatus, w.Code)
+
+			if test.expectedStatus == http.StatusOK {
+				var task model.Task
+				err = json.Unmarshal(w.Body.Bytes(), &task)
+				assert.NoError(err)
+				assert.Equal(test.expectedTask, task)
+			}
+		})
+	}
+}
+
 func TestPOSTTask(t *testing.T) {
 	server := NewAPIServer(&StubTaskRepository{})
 
@@ -114,6 +195,60 @@ func TestPOSTTask(t *testing.T) {
 			fmt.Println(w.Body.String())
 
 			if test.expectedStatus == http.StatusCreated {
+				var task model.Task
+				err = json.Unmarshal(w.Body.Bytes(), &task)
+				assert.NoError(err)
+				assert.Equal(test.expectedTask, task)
+			}
+		})
+	}
+}
+
+func TestPUTTask(t *testing.T) {
+	tasks := []model.Task{
+		{ID: "1", Name: "Task 1", Completed: false},
+		{ID: "2", Name: "Task 2", Completed: true},
+		{ID: "3", Name: "Task 3", Completed: false},
+	}
+
+	server := NewAPIServer(&StubTaskRepository{tasks: tasks})
+
+	tests := map[string]struct {
+		id             string
+		body           string
+		expectedStatus int
+		expectedTask   model.Task
+	}{
+		"Update a task": {
+			id:             "1",
+			body:           `{"name":"Task 1 Updated"}`,
+			expectedStatus: http.StatusOK,
+			expectedTask:   model.Task{ID: "1", Name: "Task 1 Updated", Completed: false},
+		},
+		"Update a task that does not exist": {
+			id:             "4",
+			body:           `{"name":"Task 4 Updated"}`,
+			expectedStatus: http.StatusNotFound,
+		},
+		"Update a task with invalid JSON": {
+			id:             "1",
+			body:           `{"name":"Task 1 Updated`,
+			expectedStatus: http.StatusBadRequest,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert := assert.New(t)
+			req, err := http.NewRequest("PUT", "/tasks/"+test.id, strings.NewReader(test.body))
+			assert.NoError(err)
+
+			w := httptest.NewRecorder()
+			server.ServeHTTP(w, req)
+
+			assert.Equal(test.expectedStatus, w.Code)
+
+			if test.expectedStatus == http.StatusOK {
 				var task model.Task
 				err = json.Unmarshal(w.Body.Bytes(), &task)
 				assert.NoError(err)
