@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/lucsky/cuid"
+	"github.com/mtbuzato/go-challenge/internal/errors"
 	"github.com/mtbuzato/go-challenge/internal/model"
 )
 
@@ -20,15 +21,15 @@ func NewTaskRepository(db *sql.DB) *TaskRepository {
 func (r *TaskRepository) ListAll() ([]model.Task, error) {
 	rows, err := r.db.Query("SELECT * FROM tasks")
 	if err != nil {
-		return nil, fmt.Errorf("Failed to query tasks: %s", err)
+		return nil, fmt.Errorf("Failed to query tasks: %w", err)
 	}
 	defer rows.Close()
 
-	var tasks []model.Task
+	tasks := []model.Task{}
 	for rows.Next() {
 		var task model.Task
 		if err := rows.Scan(&task.ID, &task.Name, &task.Completed); err != nil {
-			return nil, fmt.Errorf("Failed to scan task: %s", err)
+			return nil, fmt.Errorf("Failed to scan task: %w", err)
 		}
 		tasks = append(tasks, task)
 	}
@@ -40,15 +41,15 @@ func (r *TaskRepository) ListAll() ([]model.Task, error) {
 func (r *TaskRepository) ListByCompletion(completed bool) ([]model.Task, error) {
 	rows, err := r.db.Query("SELECT * FROM tasks WHERE completed = ?", completed)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to query tasks: %s", err)
+		return nil, fmt.Errorf("Failed to query tasks: %w", err)
 	}
 	defer rows.Close()
 
-	var tasks []model.Task
+	tasks := []model.Task{}
 	for rows.Next() {
 		var task model.Task
 		if err := rows.Scan(&task.ID, &task.Name, &task.Completed); err != nil {
-			return nil, fmt.Errorf("Failed to scan task: %s", err)
+			return nil, fmt.Errorf("Failed to scan task: %w", err)
 		}
 		tasks = append(tasks, task)
 	}
@@ -64,7 +65,11 @@ func (r *TaskRepository) GetByID(id string) (model.Task, error) {
 
 	var task model.Task
 	if err := r.db.QueryRow("SELECT * FROM tasks WHERE id = ?", id).Scan(&task.ID, &task.Name, &task.Completed); err != nil {
-		return model.Task{}, fmt.Errorf("Failed to get task by ID: %s", err)
+		if err == sql.ErrNoRows {
+			return model.Task{}, errors.NewExternalError("Task not found.")
+		}
+
+		return model.Task{}, fmt.Errorf("Failed to get task by ID: %w", err)
 	}
 
 	return task, nil
@@ -79,7 +84,7 @@ func (r *TaskRepository) Create(name string) (model.Task, error) {
 	id := cuid.New()
 
 	if _, err := r.db.Exec("INSERT INTO tasks (id, name, completed) VALUES (?, ?, ?)", id, name, false); err != nil {
-		return model.Task{}, fmt.Errorf("Failed to create task: %s", err)
+		return model.Task{}, fmt.Errorf("Failed to create task: %w", err)
 	}
 
 	return model.Task{ID: id, Name: name, Completed: false}, nil
@@ -92,7 +97,7 @@ func (r *TaskRepository) Update(task model.Task) error {
 	}
 
 	if _, err := r.db.Exec("UPDATE tasks SET name = ?, completed = ? WHERE id = ?", task.Name, task.Completed, task.ID); err != nil {
-		return fmt.Errorf("Failed to update task: %s", err)
+		return fmt.Errorf("Failed to update task: %w", err)
 	}
 
 	return nil

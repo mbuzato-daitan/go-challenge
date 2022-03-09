@@ -35,7 +35,7 @@ func TestListAll(t *testing.T) {
 		query    func(mock sqlmock.Sqlmock) *sqlmock.ExpectedQuery
 	}{
 		"empty": {
-			expected: nil,
+			expected: []model.Task{},
 			query: func(mock sqlmock.Sqlmock) *sqlmock.ExpectedQuery {
 				return mock.ExpectQuery("SELECT (.+) FROM tasks").
 					WillReturnRows(mock.NewRows(nil))
@@ -96,7 +96,7 @@ func TestListByCompletion(t *testing.T) {
 		completed bool
 	}{
 		"empty": {
-			expected: nil,
+			expected: []model.Task{},
 			query: func(mock sqlmock.Sqlmock) *sqlmock.ExpectedQuery {
 				return mock.ExpectQuery("SELECT (.+) FROM tasks WHERE completed").
 					WithArgs(false).

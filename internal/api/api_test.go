@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -36,7 +37,7 @@ func (r *StubTaskRepository) GetByID(id string) (model.Task, error) {
 	}
 
 	if task.Name == "" {
-		return task, errors.NewNotFoundError("Task not found.")
+		return task, errors.NewHTTPError("Task not found.", http.StatusNotFound)
 	}
 
 	return task, nil
@@ -60,7 +61,7 @@ func (r *StubTaskRepository) Update(task model.Task) error {
 	}
 
 	if !found {
-		return errors.NewNotFoundError("Task not found.")
+		return errors.NewHTTPError("Task not found.", http.StatusNotFound)
 	}
 
 	return nil
@@ -106,6 +107,7 @@ func TestGETTasks(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			assert := assert.New(t)
 			req, err := http.NewRequest("GET", "/tasks"+test.query, nil)
+			req.Header.Set("Authorization", "Bearer "+os.Getenv("API_KEY"))
 			assert.NoError(err)
 
 			w := httptest.NewRecorder()
@@ -145,6 +147,7 @@ func TestGETTask(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			assert := assert.New(t)
 			req, err := http.NewRequest("GET", "/tasks/"+test.id, nil)
+			req.Header.Set("Authorization", "Bearer "+os.Getenv("API_KEY"))
 			assert.NoError(err)
 
 			w := httptest.NewRecorder()
@@ -185,6 +188,7 @@ func TestPOSTTask(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			assert := assert.New(t)
 			req, err := http.NewRequest("POST", "/tasks", strings.NewReader(test.body))
+			req.Header.Set("Authorization", "Bearer "+os.Getenv("API_KEY"))
 			assert.NoError(err)
 
 			w := httptest.NewRecorder()
@@ -241,6 +245,7 @@ func TestPUTTask(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			assert := assert.New(t)
 			req, err := http.NewRequest("PUT", "/tasks/"+test.id, strings.NewReader(test.body))
+			req.Header.Set("Authorization", "Bearer "+os.Getenv("API_KEY"))
 			assert.NoError(err)
 
 			w := httptest.NewRecorder()

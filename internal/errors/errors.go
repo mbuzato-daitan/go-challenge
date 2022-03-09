@@ -1,8 +1,8 @@
 package errors
 
 type ExternalError struct {
-	msg      string
-	notFound bool
+	msg            string
+	httpStatusCode int
 }
 
 func (e *ExternalError) Error() string {
@@ -13,8 +13,12 @@ func (e *ExternalError) External() bool {
 	return true
 }
 
-func (e *ExternalError) NotFound() bool {
-	return e.notFound
+func (e *ExternalError) IsHTTP() bool {
+	return e.httpStatusCode != 0
+}
+
+func (e *ExternalError) GetHTTPStatusCode() int {
+	return e.httpStatusCode
 }
 
 func IsExternal(err error) bool {
@@ -22,9 +26,18 @@ func IsExternal(err error) bool {
 	return ok && external.External()
 }
 
-func IsNotFound(err error) bool {
+func IsHTTP(err error) bool {
 	external, ok := err.(*ExternalError)
-	return ok && external.External() && external.NotFound()
+	return ok && external.External() && external.IsHTTP()
+}
+
+func GetHTTPStatusCode(err error) int {
+	external, ok := err.(*ExternalError)
+	if ok {
+		return external.GetHTTPStatusCode()
+	}
+
+	return 0
 }
 
 func NewExternalError(message string) error {
@@ -33,9 +46,9 @@ func NewExternalError(message string) error {
 	}
 }
 
-func NewNotFoundError(message string) error {
+func NewHTTPError(message string, code int) error {
 	return &ExternalError{
-		msg:      message,
-		notFound: true,
+		msg:            message,
+		httpStatusCode: code,
 	}
 }

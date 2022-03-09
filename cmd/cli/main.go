@@ -3,10 +3,8 @@ package main
 import (
 	"database/sql"
 	"log"
-	"math/rand"
 	"os"
 	"reflect"
-	"time"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
@@ -14,8 +12,6 @@ import (
 )
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
-
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Failed to load .env.")
@@ -36,6 +32,7 @@ func main() {
 	defer db.Close()
 
 	repo := repository.NewTaskRepository(db)
+
 	testVanilla(repo)
 }
 

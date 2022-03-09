@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/mtbuzato/go-challenge/internal/errors"
@@ -33,11 +34,18 @@ func NewAPIServer(repo TaskRepository) *APIServer {
 
 	tasksRouter := router.PathPrefix("/tasks").Subrouter()
 
-	tasksRouter.HandleFunc("", server.getTasks).Methods("GET").Queries("{completed:(true)|(false)}")
+	tasksRouter.HandleFunc("", server.getTasks).Methods("GET").Queries("completed", "{completed:(?:true)|(?:false)}")
 	tasksRouter.HandleFunc("", server.getTasks).Methods("GET")
 	tasksRouter.HandleFunc("/{id}", server.getTask).Methods("GET")
 	tasksRouter.HandleFunc("", server.postTask).Methods("POST")
 	tasksRouter.HandleFunc("/{id}", server.putTask).Methods("PUT")
+
+	router.Use(server.mdwHeaders)
+	router.Use(server.mdwAuthentication)
+
+	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server.handleError(w, errors.NewHTTPError("Endpoint not found.", http.StatusNotFound))
+	})
 
 	server.Handler = router
 
@@ -46,10 +54,16 @@ func NewAPIServer(repo TaskRepository) *APIServer {
 
 func (s *APIServer) handleError(w http.ResponseWriter, err error) {
 	if errors.IsExternal(err) {
-		if errors.IsNotFound(err) {
-			w.WriteHeader(http.StatusNotFound)
+		code := errors.GetHTTPStatusCode(err)
+
+		if code != 0 {
+			w.WriteHeader(code)
 		} else {
-			w.WriteHeader(http.StatusBadRequest)
+			if strings.Contains(strings.ToLower(err.Error()), "not found") {
+				w.WriteHeader(http.StatusNotFound)
+			} else {
+				w.WriteHeader(http.StatusBadRequest)
+			}
 		}
 
 		fmt.Fprint(w, "{\"error\": \"", err.Error(), "\"}")
