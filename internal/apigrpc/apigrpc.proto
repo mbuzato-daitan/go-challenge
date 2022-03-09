@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/mtbuzato/go-challenge/internal/apigrpc";
+
+package grpc;
+
+message Task {
+  string id        = 1;
+  string name      = 2;
+  bool   completed = 3;
+}
+
+message ListTasksByCompletionRequest {
+  bool completed = 1;
+}
+
+message GetTaskByIDRequest {
+  string id = 1;
+}
+
+message CreateTaskRequest {
+  string name = 1;
+}
+
+service TaskService {
+  rpc ListTasks(google.protobuf.Empty) returns (stream Task) {}
+  rpc ListTasksByCompletion(ListTasksByCompletionRequest) returns (stream Task) {}
+  rpc GetTaskByID(GetTaskByIDRequest) returns (Task) {}
+  rpc CreateTask(CreateTaskRequest) returns (Task) {}
+  rpc UpdateTask(Task) returns (Task) {}
+}

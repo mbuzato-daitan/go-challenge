@@ -7,14 +7,14 @@ import (
 	"github.com/mtbuzato/go-challenge/internal/errors"
 )
 
-func (s *APIServer) mdwHeaders(next http.Handler) http.Handler {
+func (s *apiServer) mdwHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		next.ServeHTTP(w, r)
 	})
 }
 
-func (s *APIServer) mdwAuthentication(next http.Handler) http.Handler {
+func (s *apiServer) mdwAuthentication(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		auth := r.Header.Get("Authorization")
 		key := os.Getenv("API_KEY")

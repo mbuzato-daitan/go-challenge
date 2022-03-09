@@ -19,14 +19,14 @@ type TaskRepository interface {
 	Update(task model.Task) error
 }
 
-type APIServer struct {
+type apiServer struct {
 	http.Handler
 	repo TaskRepository
 }
 
 // Creates a new API server with the given repository.
-func NewAPIServer(repo TaskRepository) *APIServer {
-	server := new(APIServer)
+func NewAPIServer(repo TaskRepository) *apiServer {
+	server := new(apiServer)
 
 	server.repo = repo
 
@@ -52,7 +52,7 @@ func NewAPIServer(repo TaskRepository) *APIServer {
 	return server
 }
 
-func (s *APIServer) handleError(w http.ResponseWriter, err error) {
+func (s *apiServer) handleError(w http.ResponseWriter, err error) {
 	if errors.IsExternal(err) {
 		code := errors.GetHTTPStatusCode(err)
 
@@ -74,7 +74,7 @@ func (s *APIServer) handleError(w http.ResponseWriter, err error) {
 	}
 }
 
-func (s *APIServer) getTasks(w http.ResponseWriter, r *http.Request) {
+func (s *apiServer) getTasks(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	completed, ok := vars["completed"]
@@ -103,7 +103,7 @@ func (s *APIServer) getTasks(w http.ResponseWriter, r *http.Request) {
 	w.Write(str)
 }
 
-func (s *APIServer) getTask(w http.ResponseWriter, r *http.Request) {
+func (s *apiServer) getTask(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	id := vars["id"]
@@ -128,7 +128,7 @@ type PostTaskBody struct {
 	Name string `json:"name"`
 }
 
-func (s *APIServer) postTask(w http.ResponseWriter, r *http.Request) {
+func (s *apiServer) postTask(w http.ResponseWriter, r *http.Request) {
 	var taskBody PostTaskBody
 
 	err := json.NewDecoder(r.Body).Decode(&taskBody)
@@ -158,7 +158,7 @@ type PutTaskBody struct {
 	Completed bool   `json:"completed"`
 }
 
-func (s *APIServer) putTask(w http.ResponseWriter, r *http.Request) {
+func (s *apiServer) putTask(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	id := vars["id"]
