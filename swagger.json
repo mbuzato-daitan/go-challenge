@@ -1,0 +1,185 @@
+{
+    "openapi":"3.0.2",
+    "info": {
+      "title":"Go Challenge",
+      "version":"1.0"
+    },
+    "servers": [
+      {"url":"http://localhost:8080/"}
+    ],
+    "components": {
+      "schemas": {
+        "task": {
+          "type": "object",
+          "required": [
+            "id",
+            "name",
+            "completed"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 32,
+              "maxLength": 32
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "completed": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        }
+      },
+      "securitySchemes": {
+        "bearerAuth": {
+          "type": "http",
+          "scheme": "bearer"
+        }
+      }
+    },
+    "paths": {
+      "/tasks": {
+        "get": {
+          "tags": [
+            "tasks"
+          ],
+          "description": "Lists all tasks available in the repository.",
+          "parameters": [
+            {
+              "name": "completed",
+              "in": "query",
+              "description": "Filter tasks by completed status.",
+              "required": false,
+              "schema": {
+                "type": "boolean"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/task"
+                    }
+                  }
+                }
+              },
+              "description": "OK"
+            }
+          }
+        },
+        "post": {
+          "tags": [
+            "tasks"
+          ],
+          "description": "Creates a new task.",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "name"
+                  ],
+                  "properties": {
+                    "name": {
+                      "$ref": "#/components/schemas/task/properties/name"
+                    }
+                  }
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/task"
+                  }
+                }
+              },
+              "description": "OK"
+            }
+          }
+        }
+      },
+      "/tasks/{id}": {
+        "get": {
+          "tags": [
+            "tasks"
+          ],
+          "description": "Gets a specific task by its ID.",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "description": "The ID of the task to retrieve.",
+              "required": true,
+              "schema": {
+                "$ref": "#/components/schemas/task/properties/id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/task"
+                  }
+                }
+              },
+              "description": "OK"
+            }
+          }
+        },
+        "put": {
+          "tags": [
+            "tasks"
+          ],
+          "description": "Updates a specific task by its ID.",
+          "parameters": [{
+            "name": "id",
+            "in": "path",
+            "description": "The ID of the task to update.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/task/properties/id"
+            }
+          }],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/task"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "description": "OK"
+            }
+          }
+        }
+      }
+    },
+    "security": [
+      {
+        "bearerAuth": [
+          "read",
+          "write"
+        ]
+      }
+    ]
+  }
