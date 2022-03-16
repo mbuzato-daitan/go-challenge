@@ -201,3 +201,10 @@ components:
             $ref: '#/components/schemas/error'
           example:
             error: An unknown error ocurred.
+  securitySchemes:
+    Authorization:
+      type: http
+      scheme: bearer
+      bearerFormat: API Key
+security:
+  - Authorization: []
