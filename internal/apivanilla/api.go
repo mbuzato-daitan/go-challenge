@@ -31,17 +31,8 @@ func NewAPIServer(repo TaskRepository) *apiServer {
 
 	router := http.NewServeMux()
 
-	// tasksRouter := router.PathPrefix("/tasks").Subrouter()
-
 	router.HandleFunc("/tasks", server.handleTasks)
 	router.HandleFunc("/tasks/", server.handleTask)
-
-	// tasksRouter.HandleFunc("/{id}", server.getTask).Methods("GET")
-	// tasksRouter.HandleFunc("", server.postTask).Methods("POST")
-	// tasksRouter.HandleFunc("/{id}", server.putTask).Methods("PUT")
-
-	// router.Use(server.mdwHeaders)
-	// router.Use(server.mdwAuthentication)
 
 	router.HandleFunc("/", server.handleNotFound)
 
