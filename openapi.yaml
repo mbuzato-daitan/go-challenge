@@ -1,0 +1,203 @@
+openapi: 3.0.3
+info:
+  title: Go Challenge
+  description: Documentation regarding the REST API created for the Go Challenge part of the onboarding.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+    description: Local test server
+paths:
+  /tasks:
+    summary: Task listing and creation
+    get:
+      tags:
+        - Tasks
+      summary: Lists all tasks, or those that fit under the applied filters
+      description: This endpoint, if not provided with filters, will return all tasks in the repository. If there are applied filters, then only the tasks that fit those filters will be returned.
+      parameters:
+        - name: completed
+          in: query
+          description: Sets the filter for the *completed* property.
+          schema:
+            type: boolean
+      responses:
+        200:
+          description: Returned all the desired tasks.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/task'
+        400:
+          $ref: '#/components/responses/badRequest'
+        401:
+          $ref: '#/components/responses/unauthorized'
+        500:
+          $ref: '#/components/responses/internalError'
+    post:
+      tags:
+        - Tasks
+      summary: Creates a new task
+      description: This endpoint receives a task name and creates a new task with a unique ID and defaults completed to false.
+      requestBody:
+        description: Should contain the name of the task to be created.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  $ref: '#/components/schemas/taskName'
+              required:
+                - name
+            example:
+              name: Task 1
+      responses:
+        201:
+          description: Returns the created task.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/task'
+        400:
+          $ref: '#/components/responses/badRequest'
+        401:
+          $ref: '#/components/responses/unauthorized'
+        500:
+          $ref: '#/components/responses/internalError'
+  /tasks/{id}:
+    summary: Operations on a single task level.
+    parameters:
+      - name: id
+        in: path
+        description: The task ID of the desired task.
+        schema:
+          $ref: '#/components/schemas/taskID'
+        required: true
+    get:
+      tags:
+        - Task
+      summary: Returns a single task
+      description: This endpoint receives a Task ID on its path and returns the specified task, if it exists.
+      responses:
+        200:
+          description: Returns the specified task.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/task'
+        400:
+          $ref: '#/components/responses/badRequest'
+        401:
+          $ref: '#/components/responses/unauthorized'
+        404:
+          $ref: '#/components/responses/notFound'
+        500:
+          $ref: '#/components/responses/internalError'
+    put:
+      tags:
+        - Task
+      summary: Updates an existing task
+      description: This endpoint receives a full task body and is able to edit the fields of the task.
+      requestBody:
+        description: Should contain the full body of a task with the expected values.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/task'
+      responses:
+        200:
+          description: The task was edited successfully. Returns the edited task.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/task'
+        400:
+          $ref: '#/components/responses/badRequest'
+        401:
+          $ref: '#/components/responses/unauthorized'
+        404:
+          $ref: '#/components/responses/notFound'
+        500:
+          $ref: '#/components/responses/internalError'
+components:
+  schemas:
+    task:
+      title: Task
+      description: Represents a single task object.
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/taskID'
+        name:
+          $ref: '#/components/schemas/taskName'
+        completed:
+          $ref: '#/components/schemas/taskCompleted'
+      required:
+        - id
+        - name
+        - completed
+    taskID:
+      title: Task/ID
+      description: A unique ID representing the task. Follows the CUID spec.
+      type: string
+      format: cuid
+      pattern: c[0-9a-z]{24}
+      example: cabpc6txhrkxqvc1t81lf4y97
+    taskName:
+      title: Task/Name
+      description: The task's name.
+      type: string
+      minLength: 1
+      maxLength: 128
+      example: Task 1
+    taskCompleted:
+      title: Task/Completed
+      description: The task's completed state. Defaults to *false*.
+      type: boolean
+      default: false
+    error:
+      title: Error
+      description: Represents an error object. All errors returned by the API follow this exact format.
+      type: object
+      properties:
+        error:
+          title: Error description
+          description: Contains a human readable error description. Can be passed directly to the end user if needed.
+          type: string
+  responses:
+    badRequest:
+      description: The request failed because of something wrong on the request sender side. Probably a badly formatted body or query parameter.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+          example:
+            error: Task name is too long.
+    unauthorized:
+      description: The request failed because the request sender is not authenticated.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+          example:
+            error: You don't have permission to access this endpoint.
+    notFound:
+      description: The endpoint or the requested resource was not found/doesn't exist.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+          example:
+            error: Task not found.
+    internalError:
+      description: The request failed because of an unexpected error on the server side of the request. It is usually a good idea to report these errors to the developer team for further investigation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+          example:
+            error: An unknown error ocurred.
