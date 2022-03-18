@@ -50,7 +50,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(apigrpc.UnaryServerInterceptor),
+		grpc.StreamInterceptor(apigrpc.StreamServerInterceptor),
+	)
 	apigrpc.RegisterTaskServiceServer(grpcServer, apigrpc.NewGRPCServer(repo))
 
 	if err := grpcServer.Serve(listen); err != nil {
