@@ -9,7 +9,6 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
 	"github.com/mtbuzato/go-challenge/internal/api"
-	"github.com/mtbuzato/go-challenge/internal/apivanilla"
 	"github.com/mtbuzato/go-challenge/internal/orm"
 	"github.com/mtbuzato/go-challenge/internal/repository"
 )
@@ -44,12 +43,6 @@ func main() {
 		repo = repository.NewTaskRepository(db)
 	}
 
-	var server http.Handler
-	if os.Getenv("SERVER_IMPL") == "vanilla" {
-		server = apivanilla.NewAPIServer(repo)
-	} else {
-		server = api.NewAPIServer(repo)
-	}
-
+	server := api.NewAPIServer(repo)
 	http.ListenAndServe(":8080", server)
 }

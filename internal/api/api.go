@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gorilla/mux"
 	"github.com/mtbuzato/go-challenge/internal/errors"
 	"github.com/mtbuzato/go-challenge/internal/model"
 )
@@ -30,24 +29,14 @@ func NewAPIServer(repo TaskRepository) *apiServer {
 
 	server.repo = repo
 
-	router := mux.NewRouter()
+	router := http.NewServeMux()
 
-	tasksRouter := router.PathPrefix("/tasks").Subrouter()
+	router.HandleFunc("/tasks", server.handleTasks)
+	router.HandleFunc("/tasks/", server.handleTask)
 
-	tasksRouter.HandleFunc("", server.getTasks).Methods("GET").Queries("completed", "{completed:(?:true)|(?:false)}")
-	tasksRouter.HandleFunc("", server.getTasks).Methods("GET")
-	tasksRouter.HandleFunc("/{id}", server.getTask).Methods("GET")
-	tasksRouter.HandleFunc("", server.postTask).Methods("POST")
-	tasksRouter.HandleFunc("/{id}", server.putTask).Methods("PUT")
+	router.HandleFunc("/", server.handleNotFound)
 
-	router.Use(server.mdwHeaders)
-	router.Use(server.mdwAuthentication)
-
-	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		server.handleError(w, errors.NewHTTPError("Endpoint not found.", http.StatusNotFound))
-	})
-
-	server.Handler = router
+	server.Handler = server.mdwHeaders(server.mdwAuthentication(router))
 
 	return server
 }
@@ -74,15 +63,48 @@ func (s *apiServer) handleError(w http.ResponseWriter, err error) {
 	}
 }
 
-func (s *apiServer) getTasks(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
+func (s *apiServer) handleNotFound(w http.ResponseWriter, r *http.Request) {
+	s.handleError(w, errors.NewHTTPError("Endpoint not found.", http.StatusNotFound))
+}
 
-	completed, ok := vars["completed"]
+func (s *apiServer) handleTasks(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		s.getTasks(w, r)
+	case "POST":
+		s.postTask(w, r)
+	default:
+		s.handleNotFound(w, r)
+	}
+}
+
+func (s *apiServer) handleTask(w http.ResponseWriter, r *http.Request) {
+	split := strings.Split(r.URL.Path, "/")
+
+	if len(split) != 3 {
+		s.handleNotFound(w, r)
+		return
+	}
+
+	taskId := split[2]
+
+	switch r.Method {
+	case "GET":
+		s.getTask(w, r, taskId)
+	case "PUT":
+		s.putTask(w, r, taskId)
+	default:
+		s.handleNotFound(w, r)
+	}
+}
+
+func (s *apiServer) getTasks(w http.ResponseWriter, r *http.Request) {
+	completed := r.URL.Query().Get("completed")
 
 	var tasks []model.Task
 	var err error
 
-	if !ok {
+	if completed == "" {
 		tasks, err = s.repo.ListAll()
 	} else {
 		tasks, err = s.repo.ListByCompletion(completed == "true")
@@ -103,11 +125,7 @@ func (s *apiServer) getTasks(w http.ResponseWriter, r *http.Request) {
 	w.Write(str)
 }
 
-func (s *apiServer) getTask(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-
-	id := vars["id"]
-
+func (s *apiServer) getTask(w http.ResponseWriter, r *http.Request, id string) {
 	task, err := s.repo.GetByID(id)
 	if err != nil {
 		s.handleError(w, err)
@@ -158,11 +176,7 @@ type PutTaskBody struct {
 	Completed bool   `json:"completed"`
 }
 
-func (s *apiServer) putTask(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-
-	id := vars["id"]
-
+func (s *apiServer) putTask(w http.ResponseWriter, r *http.Request, id string) {
 	var taskBody PutTaskBody
 
 	err := json.NewDecoder(r.Body).Decode(&taskBody)
