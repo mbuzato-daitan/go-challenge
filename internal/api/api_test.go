@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -118,6 +117,26 @@ func TestGETTasks(t *testing.T) {
 	}
 }
 
+func BenchmarkGetTasks(b *testing.B) {
+	tasks := []model.Task{
+		{ID: "1", Name: "Task 1", Completed: false},
+		{ID: "2", Name: "Task 2", Completed: true},
+		{ID: "3", Name: "Task 3", Completed: false},
+	}
+
+	server := NewAPIServer(&StubTaskRepository{tasks: tasks})
+
+	req, _ := http.NewRequest("GET", "/tasks", nil)
+	req.Header.Set("Authorization", "Bearer "+os.Getenv("API_KEY"))
+
+	w := httptest.NewRecorder()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		server.ServeHTTP(w, req)
+	}
+}
+
 func TestGETTask(t *testing.T) {
 	tasks := []model.Task{
 		{ID: "1", Name: "Task 1", Completed: false},
@@ -165,6 +184,24 @@ func TestGETTask(t *testing.T) {
 	}
 }
 
+func BenchmarkGETTask(b *testing.B) {
+	tasks := []model.Task{
+		{ID: "1", Name: "Task 1", Completed: false},
+	}
+
+	server := NewAPIServer(&StubTaskRepository{tasks: tasks})
+
+	req, _ := http.NewRequest("GET", "/tasks/1", nil)
+	req.Header.Set("Authorization", "Bearer "+os.Getenv("API_KEY"))
+
+	w := httptest.NewRecorder()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		server.ServeHTTP(w, req)
+	}
+}
+
 func TestPOSTTask(t *testing.T) {
 	server := NewAPIServer(&StubTaskRepository{})
 
@@ -196,8 +233,6 @@ func TestPOSTTask(t *testing.T) {
 
 			assert.Equal(test.expectedStatus, w.Code)
 
-			fmt.Println(w.Body.String())
-
 			if test.expectedStatus == http.StatusCreated {
 				var task model.Task
 				err = json.Unmarshal(w.Body.Bytes(), &task)
@@ -205,6 +240,20 @@ func TestPOSTTask(t *testing.T) {
 				assert.Equal(test.expectedTask, task)
 			}
 		})
+	}
+}
+
+func BenchmarkPOSTTask(b *testing.B) {
+	server := NewAPIServer(&StubTaskRepository{})
+
+	req, _ := http.NewRequest("POST", "/tasks", strings.NewReader(`{"name":"Task 4"}`))
+	req.Header.Set("Authorization", "Bearer "+os.Getenv("API_KEY"))
+
+	w := httptest.NewRecorder()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		server.ServeHTTP(w, req)
 	}
 }
 
@@ -260,5 +309,23 @@ func TestPUTTask(t *testing.T) {
 				assert.Equal(test.expectedTask, task)
 			}
 		})
+	}
+}
+
+func BenchmarkPUTTask(b *testing.B) {
+	tasks := []model.Task{
+		{ID: "1", Name: "Task 1", Completed: false},
+	}
+
+	server := NewAPIServer(&StubTaskRepository{tasks: tasks})
+
+	req, _ := http.NewRequest("PUT", "/tasks/1", strings.NewReader(`{"id": "1", "name":"Task 1 Updated", "completed": false}`))
+	req.Header.Set("Authorization", "Bearer "+os.Getenv("API_KEY"))
+
+	w := httptest.NewRecorder()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		server.ServeHTTP(w, req)
 	}
 }

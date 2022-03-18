@@ -22,6 +22,8 @@ func NewTaskRepository(db *sql.DB) (*TaskRepository, error) {
 		return nil, fmt.Errorf("Failed to open GORM: %w", err)
 	}
 
+	gormDB.AutoMigrate(&model.Task{})
+
 	return &TaskRepository{gormDB}, nil
 }
 
